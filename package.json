@@ -1,0 +1,21 @@
+{
+  "name": "gimnasio",
+  "version": "1.0.0",
+  "description": "Tracker de entrenamiento semanal",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Static web app - no build needed'",
+    "sync": "npx cap sync android",
+    "open": "npx cap open android"
+  },
+  "keywords": ["gym", "fitness", "tracker"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

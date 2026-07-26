@@ -1,0 +1,8 @@
+{
+	"appId": "com.gimnasio.app",
+	"appName": "Gimnasio",
+	"webDir": "www",
+	"server": {
+		"androidScheme": "https"
+	}
+}

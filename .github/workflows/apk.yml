@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Verificar secreto de firma
         id: key
@@ -36,7 +36,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -62,7 +62,7 @@ jobs:
           retention-days: 7
 
       - name: Inspeccionar APK
-        if: always()
+        if: steps.key.outputs.ok != 'true'
         run: |
           APK=$(ls android/app/build/outputs/apk/*/*.apk 2>/dev/null | head -1)
           [ -z "$APK" ] && { echo "::warning::No hay APK para inspeccionar"; exit 0; }
@@ -101,6 +101,19 @@ jobs:
           BT=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
           "$ANDROID_HOME/build-tools/$BT/apksigner" verify --print-certs gimnasio.apk
           ls -la gimnasio.apk
+
+      - name: Inspeccionar APK firmado
+        if: steps.key.outputs.ok == 'true'
+        run: |
+          APK=$(ls android/app/build/outputs/apk/*/*.apk 2>/dev/null | head -1)
+          [ -z "$APK" ] && { echo "::warning::No hay APK para inspeccionar"; exit 0; }
+          BT=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1); AAPT="$ANDROID_HOME/build-tools/$BT/aapt2"
+          echo "::notice title=APK::$(basename $APK) $(du -h $APK | cut -f1) | $($AAPT dump badging $APK | head -1)"
+          echo "::notice title=Permisos::$($AAPT dump permissions $APK | grep -o "name='[^']*'" | sed "s/name='android.permission.//;s/'//" | tr '\n' ' ')"
+          H1=$(unzip -p $APK assets/public/index.html | sha256sum | cut -c1-16); H2=$(sha256sum www/index.html | cut -c1-16)
+          echo "::notice title=HTML::apk=$H1 www=$H2 $( [ "$H1" = "$H2" ] && echo COINCIDE || echo DISTINTO ) | NativeRest=$(unzip -p $APK assets/public/index.html | grep -c 'var NativeRest')"
+          echo "::notice title=Recursos::$(unzip -l $APK | grep -oE 'res/raw/descanso.wav|assets/capacitor.plugins.json' | tr '\n' ' ') | plugins=$(unzip -p $APK assets/capacitor.plugins.json | tr -d ' \n')"
+          echo "::notice title=Splash/icono::$(unzip -l $APK | grep -cE 'ic_launcher') iconos, ic_stat_timer=$(unzip -l $APK | grep -c ic_stat_timer)"
 
       - uses: actions/upload-artifact@v4
         with:

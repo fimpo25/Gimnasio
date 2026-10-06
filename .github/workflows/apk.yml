@@ -20,12 +20,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Verificar secreto de firma
+        id: key
         env:
           PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$PW" ]; then
-            echo "::error::Falta el secreto ANDROID_KEYSTORE_PASSWORD (Settings > Secrets and variables > Actions > New repository secret)."
-            exit 1
+            echo "::warning::Falta el secreto ANDROID_KEYSTORE_PASSWORD: se compila solo una version de prueba (debug), sin publicar."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/setup-node@v4
@@ -43,6 +46,26 @@ jobs:
         run: |
           npm ci
           npx cap sync android
+
+      - name: Compilar version de prueba (sin secreto)
+        if: steps.key.outputs.ok != 'true'
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        if: steps.key.outputs.ok != 'true'
+        with:
+          name: gimnasio-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+      - name: Falta el secreto de firma
+        if: steps.key.outputs.ok != 'true'
+        run: |
+          echo "::error::Compilacion de prueba OK, pero falta ANDROID_KEYSTORE_PASSWORD para firmar y publicar el APK."
+          exit 1
 
       - name: Descifrar keystore
         env:
